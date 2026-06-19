@@ -1,0 +1,1 @@
+# Bot-o-de-Emerg-ncia
