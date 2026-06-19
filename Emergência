@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Emergência — CD Manaus SSO</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+:root {
+  --red:#D32F2F; --red-dark:#B71C1C; --red-light:#FFEBEE;
+  --orange:#E65100; --orange-light:#FFF3E0;
+  --blue:#0938F4; --blue-dark:#0620A0; --blue-light:#E8EFFE;
+  --green:#2E7D32; --green-light:#E8F5E9;
+  --yellow:#F9A825; --yellow-light:#FFFDE7;
+  --gray-100:#F5F5F5; --gray-200:#EEEEEE; --gray-300:#E0E0E0;
+  --gray-400:#BDBDBD; --gray-500:#9E9E9E; --gray-700:#616161; --gray-900:#212121;
+  --white:#FFFFFF;
+  --radius:14px; --radius-sm:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#1a1a2e;color:var(--gray-900);}
+
+/* SCREENS */
+.screen{position:fixed;inset:0;display:none;flex-direction:column;overflow:hidden;}
+.screen.active{display:flex;}
+.screen.slide-in{animation:slideIn .32s cubic-bezier(.4,0,.2,1) both;}
+.screen.slide-out{animation:slideOut .25s cubic-bezier(.4,0,.2,1) both;}
+.screen.slide-back-in{animation:slideBackIn .32s cubic-bezier(.4,0,.2,1) both;}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(-30%);opacity:0}}
+@keyframes slideBackIn{from{transform:translateX(-30%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes fadeUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes pulse-ring{0%{transform:scale(1);opacity:.6}70%{transform:scale(1.5);opacity:0}100%{transform:scale(1.5);opacity:0}}
+@keyframes btnPress{0%{transform:scale(1)}50%{transform:scale(.93)}100%{transform:scale(1)}}
+@keyframes checkDraw{from{stroke-dashoffset:60}to{stroke-dashoffset:0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+/* HOME */
+#screen-home{
+  background:linear-gradient(160deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+  align-items:center;justify-content:space-between;padding:48px 24px 36px;
+}
+.home-logo{text-align:center;animation:fadeUp .5s .1s both;}
+.home-logo .badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  color:rgba(255,255,255,.85);font-size:11px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;padding:5px 12px;border-radius:20px;margin-bottom:14px;
+}
+.home-logo .badge span{width:6px;height:6px;background:#4CAF50;border-radius:50%;display:inline-block;}
+.home-logo h1{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px;}
+.home-logo p{font-size:14px;color:rgba(255,255,255,.55);margin-top:6px;}
+
+/* PULSE BUTTON */
+.pulse-wrap{position:relative;display:flex;align-items:center;justify-content:center;animation:fadeUp .5s .2s both;}
+.pulse-ring{
+  position:absolute;width:200px;height:200px;border-radius:50%;
+  background:rgba(211,47,47,.35);
+  animation:pulse-ring 2s ease-out infinite;
+}
+.pulse-ring:nth-child(2){animation-delay:.7s;}
+.pulse-ring:nth-child(3){animation-delay:1.4s;}
+.emergency-btn{
+  position:relative;z-index:2;
+  width:168px;height:168px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#ef5350,#B71C1C);
+  border:4px solid rgba(255,255,255,.2);
+  cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  color:#fff;
+  box-shadow:0 8px 32px rgba(211,47,47,.5),inset 0 1px 0 rgba(255,255,255,.2);
+  transition:transform .12s,box-shadow .12s;
+  -webkit-tap-highlight-color:transparent;
+  outline:none;
+}
+.emergency-btn:active{animation:btnPress .2s ease both;}
+.emergency-btn svg{width:44px;height:44px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));}
+.emergency-btn .btn-label{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.9;}
+
+.home-footer{text-align:center;animation:fadeUp .5s .35s both;}
+.home-status{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+  border-radius:12px;padding:10px 20px;margin-bottom:16px;
+}
+.home-status .dot{width:8px;height:8px;background:#4CAF50;border-radius:50%;animation:pulse-ring 2s ease-out infinite;flex-shrink:0;}
+.home-status p{font-size:13px;color:rgba(255,255,255,.6);}
+.admin-link{background:none;border:none;color:rgba(255,255,255,.35);font-size:12px;cursor:pointer;text-decoration:underline;padding:4px;}
+
+/* STEP FORM */
+#screen-form{background:var(--white);}
+.form-header{
+  background:var(--red);padding:0 20px;
+  display:flex;align-items:center;gap:12px;min-height:58px;flex-shrink:0;
+}
+.back-btn{background:none;border:none;color:#fff;cursor:pointer;padding:8px;display:flex;border-radius:8px;transition:background .15s;}
+.back-btn:active{background:rgba(0,0,0,.2);}
+.form-header h2{font-size:15px;font-weight:700;color:#fff;flex:1;}
+.datetime-chip{
+  background:rgba(0,0,0,.2);color:#fff;border-radius:8px;
+  padding:5px 10px;font-size:11px;text-align:right;line-height:1.5;flex-shrink:0;
+}
+
+/* PROGRESS BAR */
+.progress-bar-wrap{background:rgba(0,0,0,.15);height:4px;flex-shrink:0;}
+.progress-bar{height:4px;background:#fff;transition:width .4s cubic-bezier(.4,0,.2,1);}
+
+/* STEPS WRAPPER */
+.steps-wrap{flex:1;overflow:hidden;position:relative;}
+.step{
+  position:absolute;inset:0;overflow-y:auto;padding:24px 20px 32px;
+  display:flex;flex-direction:column;gap:20px;
+  transition:transform .32s cubic-bezier(.4,0,.2,1),opacity .32s;
+}
+.step.hidden-right{transform:translateX(100%);opacity:0;pointer-events:none;}
+.step.hidden-left{transform:translateX(-40%);opacity:0;pointer-events:none;}
+.step.visible{transform:translateX(0);opacity:1;}
+
+/* STEP HEADER */
+.step-label{
+  display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--red);margin-bottom:4px;
+}
+.step h3{font-size:20px;font-weight:800;color:var(--gray-900);line-height:1.2;}
+.step p.hint{font-size:13px;color:var(--gray-500);margin-top:4px;}
+
+/* TIPO CARDS */
+.tipo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.tipo-card{
+  padding:14px 12px;border:2px solid var(--gray-200);border-radius:var(--radius-sm);
+  background:var(--white);cursor:pointer;text-align:center;
+  transition:all .18s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  -webkit-tap-highlight-color:transparent;
+}
+.tipo-card:active{transform:scale(.97);}
+.tipo-card .icon{
+  width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:22px;transition:transform .2s;
+}
+.tipo-card .label{font-size:12px;font-weight:600;color:var(--gray-700);}
+.tipo-card.selected{border-color:var(--red);background:var(--red-light);}
+.tipo-card.selected .label{color:var(--red-dark);}
+.tipo-card.selected .icon{transform:scale(1.12);}
+
+/* FIELD */
+.field-group label{
+  display:block;font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--gray-700);margin-bottom:6px;
+}
+.field-group input,
+.field-group textarea{
+  width:100%;padding:13px 14px;
+  border:2px solid var(--gray-200);border-radius:var(--radius-sm);
+  font-size:15px;font-family:inherit;color:var(--gray-900);background:var(--white);
+  outline:none;transition:border-color .15s,box-shadow .15s;
+  -webkit-appearance:none;
+}
+.field-group input:focus,
+.field-group textarea:focus{
+  border-color:var(--red);
+  box-shadow:0 0 0 3px rgba(211,47,47,.1);
+}
+.field-group textarea{min-height:100px;resize:none;}
+.char-count{font-size:11px;color:var(--gray-400);text-align:right;margin-top:4px;}
+
+/* TOGGLE FERIDOS */
+.toggle-row{display:flex;gap:10px;}
+.toggle-btn{
+  flex:1;padding:13px;border:2px solid var(--gray-200);border-radius:var(--radius-sm);
+  font-size:15px;font-weight:700;cursor:pointer;background:var(--white);
+  color:var(--gray-500);transition:all .18s;display:flex;align-items:center;justify-content:center;gap:8px;
+  -webkit-tap-highlight-color:transparent;
+}
+.toggle-btn.yes.sel{background:#FFEBEE;border-color:var(--red);color:var(--red-dark);}
+.toggle-btn.no.sel{background:var(--green-light);border-color:var(--green);color:var(--green);}
+.toggle-btn:active{transform:scale(.97);}
+
+/* FOTO */
+.photo-zone{
+  border:2px dashed var(--gray-300);border-radius:var(--radius-sm);
+  padding:24px 16px;text-align:center;cursor:pointer;
+  transition:border-color .15s,background .15s;position:relative;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.photo-zone:active{background:var(--gray-100);}
+.photo-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.photo-zone .ph-icon{font-size:32px;}
+.photo-zone p{font-size:13px;color:var(--gray-500);}
+.photo-zone.has-photo{border-style:solid;border-color:var(--green);background:var(--green-light);}
+.photo-thumb{width:100%;max-height:180px;object-fit:cover;border-radius:8px;display:none;margin-top:8px;}
+
+/* NEXT BTN */
+.next-btn{
+  background:var(--red);color:#fff;border:none;border-radius:var(--radius);
+  padding:16px;font-size:16px;font-weight:800;cursor:pointer;width:100%;
+  letter-spacing:.02em;transition:background .15s,transform .1s;
+  box-shadow:0 4px 16px rgba(211,47,47,.35);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  -webkit-tap-highlight-color:transparent;
+}
+.next-btn:active{transform:scale(.98);background:var(--red-dark);}
+.next-btn:disabled{background:var(--gray-300);color:var(--gray-500);box-shadow:none;cursor:not-allowed;}
+.next-btn svg{width:20px;height:20px;}
+
+/* CONFIRMAÇÃO */
+#screen-confirm{background:var(--gray-100);}
+.confirm-header{
+  background:var(--orange);padding:0 20px;min-height:58px;
+  display:flex;align-items:center;gap:12px;
+}
+.confirm-header h2{font-size:15px;font-weight:700;color:#fff;flex:1;}
+.confirm-body{flex:1;overflow-y:auto;padding:20px;}
+.confirm-card{background:var(--white);border-radius:var(--radius);overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);}
+.confirm-tipo{
+  padding:16px 20px;display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid var(--gray-200);
+}
+.confirm-tipo .tipo-badge{
+  font-size:24px;width:48px;height:48px;border-radius:12px;
+  background:var(--orange-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.confirm-tipo strong{font-size:16px;font-weight:800;color:var(--gray-900);}
+.confirm-tipo small{font-size:12px;color:var(--gray-500);}
+.confirm-row{
+  padding:12px 20px;display:flex;gap:12px;align-items:flex-start;
+  border-bottom:1px solid var(--gray-100);
+}
+.confirm-row:last-child{border-bottom:none;}
+.confirm-row .cr-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);width:72px;flex-shrink:0;padding-top:2px;}
+.confirm-row .cr-value{font-size:14px;color:var(--gray-900);flex:1;line-height:1.5;}
+.confirm-footer{padding:20px;display:flex;flex-direction:column;gap:10px;}
+.confirm-send{
+  background:var(--orange);color:#fff;border:none;border-radius:var(--radius);
+  padding:16px;font-size:16px;font-weight:800;cursor:pointer;width:100%;
+  box-shadow:0 4px 16px rgba(230,81,0,.35);display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:background .15s;-webkit-tap-highlight-color:transparent;
+}
+.confirm-send:active{background:#BF360C;}
+.confirm-edit{
+  background:var(--white);color:var(--gray-700);border:2px solid var(--gray-200);
+  border-radius:var(--radius);padding:14px;font-size:15px;font-weight:600;cursor:pointer;
+  width:100%;transition:border-color .15s;
+}
+.confirm-edit:active{border-color:var(--gray-400);}
+
+/* SENDING */
+#screen-sending{background:var(--white);align-items:center;justify-content:center;gap:24px;}
+.sending-spinner{
+  width:64px;height:64px;border:5px solid var(--gray-200);border-top-color:var(--red);
+  border-radius:50%;animation:spin .8s linear infinite;
+}
+#screen-sending h2{font-size:18px;font-weight:700;color:var(--gray-900);}
+#screen-sending p{font-size:14px;color:var(--gray-500);}
+
+/* SUCCESS */
+#screen-success{
+  background:linear-gradient(160deg,#1B5E20 0%,#2E7D32 60%,#388E3C 100%);
+  align-items:center;justify-content:center;gap:20px;padding:40px 24px;text-align:center;
+}
+.success-circle{
+  width:100px;height:100px;border-radius:50%;
+  background:rgba(255,255,255,.15);border:3px solid rgba(255,255,255,.4);
+  display:flex;align-items:center;justify-content:center;
+  animation:fadeUp .4s .1s both;
+}
+.check-svg{width:52px;height:52px;}
+.check-svg polyline{
+  stroke:#fff;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:60;stroke-dashoffset:60;
+  animation:checkDraw .4s .3s ease forwards;
+}
+#screen-success h2{font-size:24px;font-weight:800;color:#fff;animation:fadeUp .4s .2s both;}
+#screen-success p{font-size:15px;color:rgba(255,255,255,.75);max-width:280px;line-height:1.6;animation:fadeUp .4s .3s both;}
+#screen-success .protocol{
+  background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.2);
+  border-radius:10px;padding:10px 20px;color:rgba(255,255,255,.9);font-size:13px;font-weight:600;
+  animation:fadeUp .4s .4s both;
+}
+.home-btn{
+  background:#fff;color:var(--green);border:none;border-radius:var(--radius);
+  padding:15px 32px;font-size:15px;font-weight:800;cursor:pointer;
+  box-shadow:0 4px 16px rgba(0,0,0,.2);animation:fadeUp .4s .5s both;
+}
+
+/* ADMIN LOGIN */
+#screen-admin-login{
+  background:linear-gradient(160deg,#1a1a2e,#16213e);
+  align-items:center;justify-content:center;padding:24px;
+}
+.login-card{
+  width:100%;max-width:360px;background:var(--white);border-radius:var(--radius);
+  padding:28px 24px;display:flex;flex-direction:column;gap:16px;
+  box-shadow:0 8px 40px rgba(0,0,0,.3);animation:fadeUp .4s both;
+}
+.login-card .logo{text-align:center;font-size:28px;}
+.login-card h2{font-size:20px;font-weight:800;text-align:center;}
+.login-card p{font-size:13px;color:var(--gray-500);text-align:center;margin-top:-8px;}
+.login-input{
+  width:100%;padding:13px 14px;border:2px solid var(--gray-200);border-radius:var(--radius-sm);
+  font-size:15px;font-family:inherit;outline:none;transition:border-color .15s;
+}
+.login-input:focus{border-color:var(--blue);}
+.error-msg{font-size:13px;color:var(--red);text-align:center;display:none;}
+.shake{animation:shake .4s ease;}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.btn-blue{
+  background:var(--blue);color:#fff;border:none;border-radius:var(--radius-sm);
+  padding:14px;font-size:15px;font-weight:700;cursor:pointer;width:100%;
+  transition:background .15s;
+}
+.btn-blue:active{background:var(--blue-dark);}
+.btn-ghost{background:none;border:none;color:var(--gray-500);font-size:13px;cursor:pointer;padding:4px;text-decoration:underline;}
+
+/* ADMIN PANEL */
+#screen-admin{background:var(--gray-100);}
+.admin-bar{
+  background:var(--blue);padding:0 20px;min-height:58px;
+  display:flex;align-items:center;gap:12px;
+}
+.admin-bar h2{font-size:15px;font-weight:700;color:#fff;flex:1;}
+.admin-bar .out-btn{background:rgba(255,255,255,.15);border:none;color:#fff;font-size:12px;font-weight:600;padding:6px 14px;border-radius:20px;cursor:pointer;}
+.admin-content{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;}
+.admin-card{background:var(--white);border-radius:var(--radius);padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.admin-card h3{
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--gray-500);padding-bottom:12px;border-bottom:1px solid var(--gray-200);margin-bottom:14px;
+}
+.email-item{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--gray-100);border-radius:8px;padding:10px 14px;margin-bottom:8px;
+  animation:fadeUp .2s ease;
+}
+.email-item span{font-size:14px;color:var(--gray-900);}
+.email-remove{
+  background:none;border:none;color:var(--red);cursor:pointer;
+  font-size:20px;font-weight:700;line-height:1;padding:0 4px;border-radius:4px;
+  transition:background .15s;
+}
+.email-remove:active{background:var(--red-light);}
+.add-row{display:flex;gap:8px;margin-top:4px;}
+.add-row input{
+  flex:1;padding:11px 12px;border:2px solid var(--gray-200);border-radius:var(--radius-sm);
+  font-size:14px;font-family:inherit;outline:none;transition:border-color .15s;
+}
+.add-row input:focus{border-color:var(--blue);}
+.add-row button{
+  background:var(--blue);color:#fff;border:none;border-radius:var(--radius-sm);
+  padding:0 16px;font-size:20px;font-weight:700;cursor:pointer;flex-shrink:0;
+  transition:background .15s;
+}
+.add-row button:active{background:var(--blue-dark);}
+.cfg-field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
+.cfg-field label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-700);}
+.cfg-field input{
+  padding:11px 12px;border:2px solid var(--gray-200);border-radius:var(--radius-sm);
+  font-size:13px;font-family:monospace;outline:none;transition:border-color .15s;
+}
+.cfg-field input:focus{border-color:var(--blue);}
+.cfg-field small{font-size:11px;color:var(--gray-400);}
+.save-btn{
+  background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);
+  padding:13px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:4px;
+  transition:background .15s;
+}
+.save-btn:active{background:#1B5E20;}
+.empty-state{font-size:13px;color:var(--gray-400);text-align:center;padding:8px 0;}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);
+  background:rgba(33,33,33,.95);color:#fff;padding:12px 20px;border-radius:24px;
+  font-size:13px;font-weight:600;opacity:0;transition:opacity .25s,transform .25s;
+  pointer-events:none;white-space:nowrap;z-index:999;max-width:280px;text-align:center;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <div class="home-logo">
+    <div class="badge"><span></span>CD Manaus — SSO</div>
+    <h1>Porta Paletes</h1>
+    <p>Área monitorada pela equipe de segurança</p>
+  </div>
+  <div class="pulse-wrap">
+    <div class="pulse-ring"></div>
+    <div class="pulse-ring"></div>
+    <div class="pulse-ring"></div>
+    <button class="emergency-btn" id="emergency-btn" onclick="startEmergency()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span class="btn-label">Emergência</span>
+    </button>
+  </div>
+  <div class="home-footer">
+    <div class="home-status">
+      <span class="dot"></span>
+      <p>Sistema ativo · Toque para registrar ocorrência</p>
+    </div>
+    <button class="admin-link" onclick="goTo('admin-login')">Área administrativa</button>
+  </div>
+</div>
+
+<!-- FORM (steps) -->
+<div id="screen-form" class="screen">
+  <div class="form-header">
+    <button class="back-btn" onclick="stepBack()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    </button>
+    <h2 id="form-title">Registrar Ocorrência</h2>
+    <div class="datetime-chip" id="datetime-chip"></div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="progress-bar" style="width:25%"></div>
+  </div>
+
+  <div class="steps-wrap">
+
+    <!-- STEP 1: Tipo -->
+    <div class="step visible" id="step-1">
+      <div>
+        <div class="step-label">Passo 1 de 4</div>
+        <h3>Qual foi a ocorrência?</h3>
+        <p class="hint">Selecione o tipo mais adequado</p>
+      </div>
+      <div class="tipo-grid">
+        <button class="tipo-card" data-value="Queda de material" onclick="selectTipo(this)">
+          <div class="icon">📦</div><div class="label">Queda de material</div>
+        </button>
+        <button class="tipo-card" data-value="Acidente com pessoa" onclick="selectTipo(this)">
+          <div class="icon">🚑</div><div class="label">Acidente com pessoa</div>
+        </button>
+        <button class="tipo-card" data-value="Quase acidente" onclick="selectTipo(this)">
+          <div class="icon">⚠️</div><div class="label">Quase acidente</div>
+        </button>
+        <button class="tipo-card" data-value="Dano estrutural" onclick="selectTipo(this)">
+          <div class="icon">🏗️</div><div class="label">Dano estrutural</div>
+        </button>
+        <button class="tipo-card" style="grid-column:span 2;" data-value="Outro" onclick="selectTipo(this)">
+          <div class="icon">📋</div><div class="label">Outro</div>
+        </button>
+      </div>
+      <button class="next-btn" id="next-1" onclick="goStep(2)" disabled>
+        Continuar
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
+    <!-- STEP 2: Dados -->
+    <div class="step hidden-right" id="step-2">
+      <div>
+        <div class="step-label">Passo 2 de 4</div>
+        <h3>Quem e onde?</h3>
+        <p class="hint">Preencha os dados do colaborador e local</p>
+      </div>
+      <div class="field-group">
+        <label>Nome do colaborador *</label>
+        <input type="text" id="f-nome" placeholder="Nome completo" autocomplete="off" oninput="checkStep2()">
+      </div>
+      <div class="field-group">
+        <label>Setor / localização *</label>
+        <input type="text" id="f-setor" placeholder="Ex: Corredor 3, Bloco B" oninput="checkStep2()">
+      </div>
+      <div class="field-group">
+        <label>Há feridos?</label>
+        <div class="toggle-row">
+          <button class="toggle-btn yes" id="btn-sim" onclick="setFeridos('Sim')">🚨 Sim</button>
+          <button class="toggle-btn no" id="btn-nao" onclick="setFeridos('Não')">✅ Não</button>
+        </div>
+      </div>
+      <button class="next-btn" id="next-2" onclick="goStep(3)" disabled>
+        Continuar
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
+    <!-- STEP 3: Descrição + foto -->
+    <div class="step hidden-right" id="step-3">
+      <div>
+        <div class="step-label">Passo 3 de 4</div>
+        <h3>O que aconteceu?</h3>
+        <p class="hint">Descreva com o máximo de detalhes</p>
+      </div>
+      <div class="field-group">
+        <label>Descrição da ocorrência *</label>
+        <textarea id="f-descricao" placeholder="Descreva o que aconteceu, como ocorreu, quais objetos ou pessoas envolvidas..." oninput="updateCharCount(this);checkStep3()"></textarea>
+        <div class="char-count" id="char-count">0 caracteres</div>
+      </div>
+      <div class="field-group">
+        <label>Foto do local (opcional)</label>
+        <div class="photo-zone" id="photo-zone">
+          <div class="ph-icon">📷</div>
+          <p id="photo-label">Toque para tirar foto ou escolher da galeria</p>
+          <input type="file" accept="image/*" capture="environment" id="photo-input" onchange="previewPhoto(this)">
+          <img class="photo-thumb" id="photo-thumb">
+        </div>
+      </div>
+      <button class="next-btn" id="next-3" onclick="goStep(4)" disabled>
+        Revisar antes de enviar
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
+    <!-- STEP 4: Confirmação inline -->
+    <div class="step hidden-right" id="step-4">
+      <div>
+        <div class="step-label">Passo 4 de 4</div>
+        <h3>Confirmar e enviar</h3>
+        <p class="hint">Revise os dados antes de enviar</p>
+      </div>
+      <div class="confirm-card">
+        <div class="confirm-tipo" id="preview-tipo-row">
+          <div class="tipo-badge" id="preview-icon"></div>
+          <div><strong id="preview-tipo"></strong><br><small>Tipo de ocorrência</small></div>
+        </div>
+        <div class="confirm-row"><span class="cr-label">Data</span><span class="cr-value" id="preview-dt"></span></div>
+        <div class="confirm-row"><span class="cr-label">Nome</span><span class="cr-value" id="preview-nome"></span></div>
+        <div class="confirm-row"><span class="cr-label">Setor</span><span class="cr-value" id="preview-setor"></span></div>
+        <div class="confirm-row"><span class="cr-label">Feridos</span><span class="cr-value" id="preview-feridos"></span></div>
+        <div class="confirm-row"><span class="cr-label">Descrição</span><span class="cr-value" id="preview-desc"></span></div>
+      </div>
+      <button class="next-btn" id="send-btn" onclick="submitForm()" style="background:var(--orange);box-shadow:0 4px 16px rgba(230,81,0,.35);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="20" height="20"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Enviar ocorrência agora
+      </button>
+      <button class="confirm-edit" onclick="goStep(1)">Corrigir informações</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- SENDING -->
+<div id="screen-sending" class="screen">
+  <div class="sending-spinner"></div>
+  <h2>Enviando ocorrência…</h2>
+  <p>Notificando a equipe SSO</p>
+</div>
+
+<!-- SUCCESS -->
+<div id="screen-success" class="screen">
+  <div class="success-circle">
+    <svg class="check-svg" viewBox="0 0 52 52"><polyline points="14,26 22,34 38,18"/></svg>
+  </div>
+  <h2>Ocorrência registrada!</h2>
+  <p>A equipe SSO foi notificada. Aguarde o atendimento e mantenha a área isolada.</p>
+  <div class="protocol" id="protocol-num"></div>
+  <button class="home-btn" onclick="resetAndGoHome()">Voltar ao início</button>
+</div>
+
+<!-- ADMIN LOGIN -->
+<div id="screen-admin-login" class="screen">
+  <div class="login-card">
+    <div class="logo">🔐</div>
+    <h2>Área administrativa</h2>
+    <p>Acesso restrito à equipe SSO</p>
+    <input type="password" class="login-input" id="admin-pwd" placeholder="Digite a senha" onkeydown="if(event.key==='Enter')checkAdmin()">
+    <span class="error-msg" id="pwd-error">Senha incorreta. Tente novamente.</span>
+    <button class="btn-blue" onclick="checkAdmin()">Entrar</button>
+    <button class="btn-ghost" onclick="goTo('home')">Cancelar</button>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="screen-admin" class="screen">
+  <div class="admin-bar">
+    <h2>Painel SSO — CD Manaus</h2>
+    <button class="out-btn" onclick="goTo('home')">Sair</button>
+  </div>
+  <div class="admin-content">
+
+    <div class="admin-card">
+      <h3>📧 Destinatários de e-mail</h3>
+      <div id="email-list"></div>
+      <div class="add-row">
+        <input type="email" id="new-email" placeholder="novo@email.com" onkeydown="if(event.key==='Enter')addEmail()">
+        <button onclick="addEmail()">+</button>
+      </div>
+    </div>
+
+    <div class="admin-card">
+      <h3>⚙️ Configuração EmailJS</h3>
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px;">Necessário para envio automático. <a href="https://www.emailjs.com" target="_blank" style="color:var(--blue);">Criar conta grátis →</a></p>
+      <div class="cfg-field">
+        <label>Public Key</label>
+        <input type="text" id="ejs-pk" placeholder="sua_public_key">
+        <small>Account → API Keys</small>
+      </div>
+      <div class="cfg-field">
+        <label>Service ID</label>
+        <input type="text" id="ejs-sid" placeholder="service_xxxxxxx">
+        <small>Email Services</small>
+      </div>
+      <div class="cfg-field">
+        <label>Template ID</label>
+        <input type="text" id="ejs-tid" placeholder="template_xxxxxxx">
+        <small>Email Templates</small>
+      </div>
+      <button class="save-btn" onclick="saveConfig()">✓ Salvar configurações</button>
+    </div>
+
+    <div class="admin-card">
+      <h3>🔑 Alterar senha</h3>
+      <div class="cfg-field" style="margin-bottom:0">
+        <label>Nova senha</label>
+        <input type="password" id="new-pwd" placeholder="Mínimo 4 caracteres">
+      </div>
+      <button class="save-btn" style="background:var(--blue);margin-top:12px;" onclick="changePwd()">✓ Alterar senha</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──
+let step = 1;
+let selectedTipo = '';
+let selectedFeridos = '';
+let formDatetime = '';
+let adminPassword = localStorage.getItem('sso_admin_pwd') || 'sso2024';
+let emailList = JSON.parse(localStorage.getItem('sso_emails') || '[]');
+let ejsConfig = JSON.parse(localStorage.getItem('sso_ejs_config') || '{}');
+
+const TIPO_ICONS = {
+  'Queda de material':'📦','Acidente com pessoa':'🚑',
+  'Quase acidente':'⚠️','Dano estrutural':'🏗️','Outro':'📋'
+};
+
+// ── NAV ──
+function goTo(id, back) {
+  const cur = document.querySelector('.screen.active');
+  const next = document.getElementById('screen-' + id);
+  if (!next || cur === next) return;
+  if (back) {
+    cur.classList.add('slide-in'); // reuse as exit
+    next.classList.add('slide-back-in');
+  } else {
+    next.classList.add('slide-in');
+  }
+  setTimeout(() => {
+    cur.classList.remove('active','slide-in','slide-back-in');
+    next.classList.remove('slide-in','slide-back-in');
+    next.classList.add('active');
+  }, 10);
+
+  if (id === 'admin') renderAdmin();
+}
+
+function startEmergency() {
+  formDatetime = new Date().toLocaleString('pt-BR');
+  const now = new Date();
+  const d = now.toLocaleDateString('pt-BR');
+  const t = now.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+  document.getElementById('datetime-chip').innerHTML = d + '<br>' + t;
+  step = 1;
+  selectedTipo = '';
+  selectedFeridos = '';
+  document.querySelectorAll('.tipo-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('f-nome').value = '';
+  document.getElementById('f-setor').value = '';
+  document.getElementById('f-descricao').value = '';
+  document.getElementById('char-count').textContent = '0 caracteres';
+  document.getElementById('photo-thumb').style.display = 'none';
+  document.getElementById('photo-zone').classList.remove('has-photo');
+  document.getElementById('photo-label').textContent = 'Toque para tirar foto ou escolher da galeria';
+  document.getElementById('next-1').disabled = true;
+  document.getElementById('next-2').disabled = true;
+  document.getElementById('next-3').disabled = true;
+  document.getElementById('btn-sim').classList.remove('sel');
+  document.getElementById('btn-nao').classList.remove('sel');
+  showStep(1);
+  goTo('form');
+}
+
+// ── STEPS ──
+function showStep(n, back) {
+  const prev = document.getElementById('step-' + step);
+  const next = document.getElementById('step-' + n);
+  const titles = ['','Tipo de ocorrência','Dados do colaborador','Descrição e foto','Confirmação'];
+  const progress = [0,25,50,75,100];
+  if (back) {
+    prev.classList.remove('visible');
+    prev.classList.add('hidden-right');
+    next.classList.remove('hidden-left','hidden-right');
+    next.classList.add('visible');
+  } else {
+    prev.classList.remove('visible');
+    prev.classList.add('hidden-left');
+    next.classList.remove('hidden-left','hidden-right');
+    next.classList.add('visible');
+  }
+  step = n;
+  document.getElementById('form-title').textContent = titles[n];
+  document.getElementById('progress-bar').style.width = progress[n] + '%';
+}
+
+function goStep(n) {
+  if (n > step) showStep(n, false);
+  else showStep(n, true);
+  if (n === 4) fillPreview();
+}
+
+function stepBack() {
+  if (step > 1) showStep(step - 1, true);
+  else goTo('home', true);
+}
+
+// ── TIPO ──
+function selectTipo(el) {
+  document.querySelectorAll('.tipo-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTipo = el.dataset.value;
+  document.getElementById('next-1').disabled = false;
+}
+
+// ── STEP 2 ──
+function setFeridos(v) {
+  selectedFeridos = v;
+  document.getElementById('btn-sim').classList.toggle('sel', v==='Sim');
+  document.getElementById('btn-nao').classList.toggle('sel', v==='Não');
+}
+
+function checkStep2() {
+  const ok = document.getElementById('f-nome').value.trim() && document.getElementById('f-setor').value.trim();
+  document.getElementById('next-2').disabled = !ok;
+}
+
+// ── STEP 3 ──
+function updateCharCount(el) {
+  document.getElementById('char-count').textContent = el.value.length + ' caracteres';
+}
+
+function checkStep3() {
+  document.getElementById('next-3').disabled = document.getElementById('f-descricao').value.trim().length < 10;
+}
+
+function previewPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('photo-thumb');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('photo-zone').classList.add('has-photo');
+    document.getElementById('photo-label').textContent = '✓ Foto adicionada';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── PREVIEW ──
+function fillPreview() {
+  document.getElementById('preview-icon').textContent = TIPO_ICONS[selectedTipo] || '📋';
+  document.getElementById('preview-tipo').textContent = selectedTipo;
+  document.getElementById('preview-dt').textContent = formDatetime;
+  document.getElementById('preview-nome').textContent = document.getElementById('f-nome').value.trim();
+  document.getElementById('preview-setor').textContent = document.getElementById('f-setor').value.trim();
+  document.getElementById('preview-feridos').textContent = selectedFeridos || 'Não informado';
+  const desc = document.getElementById('f-descricao').value.trim();
+  document.getElementById('preview-desc').textContent = desc.length > 120 ? desc.slice(0,120)+'…' : desc;
+}
+
+// ── ENVIO ──
+async function submitForm() {
+  const cfg = ejsConfig;
+  if (!cfg.publicKey || !cfg.serviceId || !cfg.templateId) {
+    showToast('⚠️ EmailJS não configurado no painel admin');
+    return;
+  }
+  goTo('sending');
+  const protocol = 'SSO-' + Date.now().toString().slice(-6);
+  const params = {
+    tipo: selectedTipo,
+    nome: document.getElementById('f-nome').value.trim(),
+    setor: document.getElementById('f-setor').value.trim(),
+    descricao: document.getElementById('f-descricao').value.trim(),
+    feridos: selectedFeridos || 'Não informado',
+    datetime: formDatetime,
+    protocol: protocol,
+    to_emails: emailList.join(', ') || '—'
+  };
+  try {
+    emailjs.init(cfg.publicKey);
+    await emailjs.send(cfg.serviceId, cfg.templateId, params);
+    document.getElementById('protocol-num').textContent = 'Protocolo: ' + protocol;
+    goTo('success');
+  } catch (err) {
+    goTo('form');
+    showStep(4, true);
+    showToast('Erro ao enviar. Verifique as configurações.');
+    console.error(err);
+  }
+}
+
+function resetAndGoHome() {
+  goTo('home', true);
+}
+
+// ── ADMIN ──
+function checkAdmin() {
+  const pwd = document.getElementById('admin-pwd').value;
+  const card = document.querySelector('.login-card');
+  if (pwd === adminPassword) {
+    document.getElementById('admin-pwd').value = '';
+    document.getElementById('pwd-error').style.display = 'none';
+    goTo('admin');
+  } else {
+    document.getElementById('pwd-error').style.display = 'block';
+    card.classList.remove('shake');
+    void card.offsetWidth;
+    card.classList.add('shake');
+  }
+}
+
+function renderAdmin() {
+  const list = document.getElementById('email-list');
+  list.innerHTML = emailList.length ? '' : '<p class="empty-state">Nenhum e-mail cadastrado ainda.</p>';
+  emailList.forEach((e,i) => {
+    const d = document.createElement('div');
+    d.className = 'email-item';
+    d.innerHTML = `<span>${e}</span><button class="email-remove" onclick="removeEmail(${i})">×</button>`;
+    list.appendChild(d);
+  });
+  document.getElementById('ejs-pk').value = ejsConfig.publicKey||'';
+  document.getElementById('ejs-sid').value = ejsConfig.serviceId||'';
+  document.getElementById('ejs-tid').value = ejsConfig.templateId||'';
+}
+
+function addEmail() {
+  const inp = document.getElementById('new-email');
+  const email = inp.value.trim().toLowerCase();
+  if (!email.includes('@')) { showToast('E-mail inválido'); return; }
+  if (emailList.includes(email)) { showToast('E-mail já cadastrado'); return; }
+  emailList.push(email);
+  localStorage.setItem('sso_emails', JSON.stringify(emailList));
+  inp.value = '';
+  renderAdmin();
+  showToast('✓ E-mail adicionado');
+}
+
+function removeEmail(i) {
+  emailList.splice(i, 1);
+  localStorage.setItem('sso_emails', JSON.stringify(emailList));
+  renderAdmin();
+  showToast('E-mail removido');
+}
+
+function saveConfig() {
+  ejsConfig = {
+    publicKey: document.getElementById('ejs-pk').value.trim(),
+    serviceId: document.getElementById('ejs-sid').value.trim(),
+    templateId: document.getElementById('ejs-tid').value.trim()
+  };
+  localStorage.setItem('sso_ejs_config', JSON.stringify(ejsConfig));
+  showToast('✓ Configurações salvas!');
+}
+
+function changePwd() {
+  const v = document.getElementById('new-pwd').value;
+  if (v.length < 4) { showToast('Senha muito curta'); return; }
+  adminPassword = v;
+  localStorage.setItem('sso_admin_pwd', v);
+  document.getElementById('new-pwd').value = '';
+  showToast('✓ Senha alterada!');
+}
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
